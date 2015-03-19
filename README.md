@@ -1,2 +1,2 @@
 # RenderLike
-C# XNA based console emulator in the spirit of libtcod
+C# MonoGame based console emulator in the spirit of libtcod
