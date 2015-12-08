@@ -43,6 +43,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Bresenham.cs" />
     <Compile Include="BSP\BSPNode.cs" />
     <Compile Include="BSP\BSPTree.cs" />
     <Compile Include="BSP\SplitDirection.cs" />
