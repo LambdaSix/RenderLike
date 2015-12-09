@@ -1,28 +1,26 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Diagnostics;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Color = Microsoft.Xna.Framework.Color;
+using Rectangle = Microsoft.Xna.Framework.Rectangle;
 
-namespace RenderLike
-{
-    public class RLConsole
-    {
+namespace RenderLike {
+    public class RLConsole {
+        internal readonly int Width;
+        internal readonly int Height;
+        internal Surface _rootSurface;
+        private int surfaceIdx = 0;
+
+
         public GraphicsDevice Graphics { get; set; }
         public Font Font { get; set; }
         public SpriteBatch SpriteBatch { get; set; }
-        public RootSurface RootSurface { get; set; }
         public RenderTarget2D RenderTarget { get; set; }
 
-        public int CharacterWidth {
-            get { return Font == null ? 0 : Font.CharacterWidth; }
-        }
+        public int CharacterWidth { get { return Font == null ? 0 : Font.CharacterWidth; } }
 
-        public int CharacterHeight {
-            get { return Font == null ? 0 : Font.CharacterHeight; }
-        }
+        public int CharacterHeight { get { return Font == null ? 0 : Font.CharacterHeight; } }
 
         public RLConsole(GraphicsDevice device, Font font, int width, int height) {
             if (device == null)
@@ -38,17 +36,11 @@ namespace RenderLike
             Font = font;
             SpriteBatch = new SpriteBatch(device);
 
-            RenderTarget = new RenderTarget2D(device,
-                font.CharacterWidth*width,
-                font.CharacterHeight*height,
-                false, // Mipmap
-                SurfaceFormat.Color,
-                DepthFormat.None,
-                0, // PreferredMultiSampleCount
-                RenderTargetUsage.PreserveContents);
+            Width = width;
+            Height = height;
 
-            RootSurface = new RootSurface(width, height, font, this);
-            RootSurface.Clear();
+            RenderTarget = AllocateTarget(font);
+            _rootSurface = new Surface(width, height, Font, this, surfaceIdx);
         }
 
         public void ChangeFont(Font font) {
@@ -58,49 +50,11 @@ namespace RenderLike
                 return;
 
             Font = font;
-            RenderTarget = new RenderTarget2D(Graphics,
-                font.CharacterWidth*RootSurface.Width,
-                font.CharacterHeight*RootSurface.Height,
-                false, // Mipmap
-                SurfaceFormat.Color,
-                DepthFormat.None,
-                0, // PreferredMultiSampleCount
-                RenderTargetUsage.PreserveContents
-                );
-            RootSurface.Font = font;
-            RootSurface.Clear();
+            RenderTarget = AllocateTarget(font);
         }
 
         public RenderTarget2D Flush() {
-            Graphics.SetRenderTarget(RenderTarget);
-            SpriteBatch.Begin(SpriteSortMode.Deferred, BlendState.NonPremultiplied);
-
-            var src = new Rectangle(0, 0, 8, 8);
-
-            for (int y = 0; y < RootSurface.Height; y++) {
-                for (int x = 0; x < RootSurface.Width; x++) {
-                    if (RootSurface.DirtyCells[x + y*RootSurface.Width] == true) {
-                        // Background
-                        Font.SetFontSourceRect(ref src, (char) Font.SolidChar);
-                        SpriteBatch.Draw(Font.Texture,
-                            new Vector2(x*Font.CharacterWidth, y*Font.CharacterWidth),
-                            src,
-                            RootSurface.Cells[x + y*RootSurface.Width].Back);
-
-                        // Foreground
-                        Font.SetFontSourceRect(ref src, RootSurface.Cells[x + y*RootSurface.Width].Char);
-                        SpriteBatch.Draw(Font.Texture,
-                            new Vector2(x*Font.CharacterWidth, y*Font.CharacterHeight),
-                            src,
-                            RootSurface.Cells[x + y*RootSurface.Width].Fore);
-                    }
-                }
-            }
-
-            SpriteBatch.End();
-            Graphics.SetRenderTarget(null);
-            Array.Clear(RootSurface.DirtyCells, 0, RootSurface.DirtyCells.Length);
-            return RenderTarget;
+            return RenderSurfaceToTarget(_rootSurface, RenderTarget);
         }
 
         public Surface CreateSurface(int width, int height) {
@@ -109,10 +63,41 @@ namespace RenderLike
             if (height <= 0)
                 throw new ArgumentOutOfRangeException("height");
 
-            return new Surface(width, height, Font, this);
+            return new Surface(width, height, Font, this, ++surfaceIdx);
+        }
+
+        /// <summary>
+        /// Draw from a Surface into a RenderTarget2D
+        /// </summary>
+        /// <param name="src">Surface to take cells from</param>
+        /// <param name="target">Target to draw into</param>
+        /// <returns>The modified RenderTarget2D</returns>
+        internal RenderTarget2D RenderSurfaceToTarget(Surface src, RenderTarget2D target) {
+            return src.RenderSurface(target);
+        }
+
+        /// <summary>
+        /// Blit from a Surface to the console's surface for final rendering
+        /// </summary>
+        /// <param name="src">Source surface to blit from</param>
+        /// <param name="srcRect">Bounding rectangle to blit from src</param>
+        /// <param name="destX">Destination X (top-left)</param>
+        /// <param name="destY">Destination Y (top-left)</param>
+        public void Blit(Surface src, Rectangle srcRect, int destX, int destY) {
+            Blit(src, _rootSurface, srcRect, destX, destY);
+        }
+
+        public void Blit(Surface src, Surface dst, int destX, int destY) {
+            if (src == null)
+                throw new ArgumentNullException("src");
+            if (dst == null)
+                throw new ArgumentNullException("dst");
+
+            Blit(src, dst, new Rectangle(0, 0, src.Width, src.Height), destX, destY);
         }
 
         public void Blit(Surface src, Surface dst, Rectangle srcRect, int destX, int destY) {
+            Debug.WriteLine($"Blitting from Surface-{src.Index} into Surface-{dst.Index}");
             if (src == null)
                 throw new ArgumentNullException("src");
             if (dst == null)
@@ -121,9 +106,6 @@ namespace RenderLike
             var blitRect = new Rectangle(destX, destY, srcRect.Width, srcRect.Height);
             int deltaX = srcRect.Left - blitRect.Left;
             int deltaY = srcRect.Top - blitRect.Top;
-
-            bool dstIsRoot = dst is RootSurface;
-            var dstAsRoot = dst as RootSurface;
 
             blitRect = Rectangle.Intersect(blitRect, new Rectangle(0, 0, dst.Width, dst.Height));
 
@@ -136,14 +118,18 @@ namespace RenderLike
                     dst.Cells[x + y*dst.Width].Fore = src.Cells[sx + sy*src.Width].Fore;
                     dst.Cells[x + y*dst.Width].Char = src.Cells[sx + sy*src.Width].Char;
 
-                    if (dstIsRoot) {
-                        dstAsRoot.DirtyCells[x + y*dst.Width] = true;
-                    }
+                    dst.DirtyCells[x + y*dst.Width] = true;
                 }
             }
         }
 
-        public void BlitAlpha(Surface src, Surface dst, Rectangle srcRect, int destX, int destY, float fgAlpha, float bgAlpha) {
+        public void BlitAlpha(Surface src, Rectangle srcRect, int destX, int destY, float fgAlpha, float bgAlpha) {
+            BlitAlpha(src, _rootSurface, srcRect, destX, destY, fgAlpha, bgAlpha);
+        }
+
+        public void BlitAlpha(Surface src, Surface dst, Rectangle srcRect, int destX, int destY, float fgAlpha,
+            float bgAlpha) {
+            Debug.WriteLine($"Blitting from Surface-{src.Index} into Surface-{dst.Index}");
             if (src == null)
                 throw new ArgumentNullException("src");
             if (dst == null)
@@ -156,8 +142,6 @@ namespace RenderLike
             int deltaX = srcRect.Left - blitRect.Left;
             int deltaY = srcRect.Top - blitRect.Top;
 
-            var dstAsRoot = dst as RootSurface;
-
             blitRect = Rectangle.Intersect(blitRect, new Rectangle(0, 0, dst.Width, dst.Height));
             Color backCol, foreCol;
             char ch;
@@ -168,7 +152,7 @@ namespace RenderLike
                     int sy = deltaY + y;
 
                     backCol = dst.Cells[x + y*dst.Width].Back;
-                    backCol.A = (byte)(bgAlpha * 255.0f + 0.5f);
+                    backCol.A = (byte) (bgAlpha*255.0f + 0.5f);
 
                     if (src.Cells[sx + sy*src.Width].Char == ' ') {
                         foreCol = dst.Cells[x + y*dst.Width].Fore;
@@ -184,14 +168,18 @@ namespace RenderLike
                     dst.Cells[x + y*dst.Width].Fore = foreCol;
                     dst.Cells[x + y*dst.Width].Char = ch;
 
-                    if (dstAsRoot != null) {
-                        dstAsRoot.DirtyCells[x + y*dst.Width] = true;
-                    }
+                    dst.DirtyCells[x + y*dst.Width] = true;
                 }
             }
         }
 
+        public void BlitAlpha(Surface src, Rectangle srcRect, int destX, int destY, float alpha) {
+            BlitAlpha(src, _rootSurface, srcRect, destX, destY, alpha);
+        }
+
         public void BlitAlpha(Surface src, Surface dst, Rectangle srcRect, int destX, int destY, float alpha) {
+            Debug.WriteLine($"Blitting from Surface-{src.Index} into Surface-{dst.Index}");
+
             if (src == null)
                 throw new ArgumentNullException("src");
             if (dst == null)
@@ -202,8 +190,6 @@ namespace RenderLike
             var blitRect = new Rectangle(destX, destY, srcRect.Width, srcRect.Height);
             int deltaX = srcRect.Left - blitRect.Left;
             int deltaY = srcRect.Top - blitRect.Top;
-
-            var dstAsRoot = dst as RootSurface;
 
             blitRect = Rectangle.Intersect(blitRect, new Rectangle(0, 0, dst.Width, dst.Height));
             Color backCol, foreCol;
@@ -229,36 +215,36 @@ namespace RenderLike
                     dst.Cells[x + y*dst.Width].Fore = foreCol;
                     dst.Cells[x + y*dst.Width].Char = ch;
 
-                    if (dstAsRoot != null)
-                        dstAsRoot.DirtyCells[x + y*dst.Width] = true;
+                    dst.DirtyCells[x + y*dst.Width] = true;
                 }
             }
         }
 
-        public void Blit(Surface src, Surface dst, int destX, int destY) {
-            if (src == null)
-                throw new ArgumentNullException("src");
-            if (dst == null)
-                throw new ArgumentNullException("dst");
-
-            Blit(src, dst, new Rectangle(0, 0, src.Width, src.Height), destX, destY);
-        }
-
-        public void Blit(Texture2D src, Surface dst, Rectangle srcRect, int destX, int destY) {
-            var data = new Color[srcRect.Width*srcRect.Height];
-            src.GetData(0, srcRect, data, 0, data.Length);
-
-            for (int i = 0; i < data.Length; i++) {
-                int y = i/srcRect.Width;
-                int x = i%srcRect.Width;
-                dst.PrintChar(destX + x, destY + y, (char)Font.SolidChar, data[i]);
-            }
+        public void Clear() {
+            RootClear();
         }
 
         internal void RootClear() {
             Graphics.SetRenderTarget(RenderTarget);
-            Graphics.Clear(RootSurface.DefaultBackground);
+            Graphics.Clear(_rootSurface.DefaultBackground);
             Graphics.SetRenderTarget(null);
+        }
+
+        /// <summary>
+        /// Allocate a new RenderTarget2D
+        /// </summary>
+        /// <param name="font">Font object to use</param>
+        /// <returns></returns>
+        internal RenderTarget2D AllocateTarget(Font font) {
+            return new RenderTarget2D(Graphics,
+                font.CharacterWidth*Width,
+                font.CharacterHeight*Height,
+                false, // Mipmap
+                SurfaceFormat.Color,
+                DepthFormat.None,
+                1, // PreferredMultiSampleCount
+                RenderTargetUsage.PreserveContents
+                );
         }
     }
 }

@@ -2,14 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Color = Microsoft.Xna.Framework.Color;
+using Rectangle = Microsoft.Xna.Framework.Rectangle;
 
-namespace RenderLike
-{
+namespace RenderLike {
     /// <summary>
     /// Horizontal alignment used by various string printing methods
     /// </summary>
-    public enum HorizontalAligment
-    {
+    public enum HorizontalAligment {
         Left,
         Center,
         Right
@@ -18,8 +19,7 @@ namespace RenderLike
     /// <summary>
     /// Vertical alignment used by various string printing methods
     /// </summary>
-    public enum VerticalAlignment
-    {
+    public enum VerticalAlignment {
         Top,
         Center,
         Bottom
@@ -28,8 +28,7 @@ namespace RenderLike
     /// <summary>
     /// Wrapping mode used by various string printing methods
     /// </summary>
-    public enum WrappingType
-    {
+    public enum WrappingType {
         /// <summary>
         /// No wrapping is performed - characters will be trimmed if too long to fit
         /// </summary>
@@ -46,55 +45,37 @@ namespace RenderLike
         Word
     }
 
-    internal struct Cell
-    {
+    internal struct Cell {
         public Color Back;
         public char Char;
         public Color Fore;
-    }
 
-    public class RootSurface : Surface
-    {
-        internal bool[] DirtyCells;
-
-        internal RootSurface(int width, int height, Font font, RLConsole parent) : base(width, height, font, parent) {
-            DirtyCells = new bool[width*height];
-        }
-
-        internal override void SetCell(int x, int y, char? c, Color? fore, Color? back) {
-            if (x < 0 || x >= Width || y < 0 || y >= Height)
-                return;
-
-            base.SetCell(x, y, c, fore, back);
-            DirtyCells[x + y*Width] = true;
-        }
-
-        internal override void ClearSurface() {
-            base.ClearSurface();
-            ParentConsole.RootClear();
-            Array.Clear(DirtyCells, 0, DirtyCells.Length);
+        public override string ToString() {
+            return $"Tile: {Char}";
         }
     }
 
-    public class Surface
-    {
+    public class Surface {
         internal readonly Cell[] Cells;
+        internal bool[] DirtyCells;
         internal Font Font;
         internal readonly RLConsole ParentConsole;
 
-        internal Surface(int width, int height, Font font, RLConsole parent) {
+        internal Surface(int width, int height, Font font, RLConsole parent, int index) {
             Width = width;
             Height = height;
+            Index = index;
+
+            Font = font;
+            ParentConsole = parent;
 
             Rect = new Rectangle(0, 0, width, height);
 
             Cells = new Cell[width*height];
+            DirtyCells = new bool[width*height];
 
             DefaultBackground = Color.Black;
             DefaultForeground = Color.White;
-
-            Font = font;
-            ParentConsole = parent;
 
             for (int i = 0; i < width*height; i++) {
                 Cells[i].Back = DefaultBackground;
@@ -112,6 +93,8 @@ namespace RenderLike
         ///     Height of surface in number of character cells
         /// </summary>
         public int Height { get; private set; }
+
+        public int Index { get; set; }
 
         public Rectangle Rect { get; private set; }
 
@@ -359,7 +342,8 @@ namespace RenderLike
         /// <param name="str"></param>
         /// <param name="hAlign"></param>
         /// <param name="vAlign"></param>
-        public void PrintStringRect(Rectangle rect, string str, HorizontalAligment hAlign, VerticalAlignment vAlign = VerticalAlignment.Top) {
+        public void PrintStringRect(Rectangle rect, string str, HorizontalAligment hAlign,
+            VerticalAlignment vAlign = VerticalAlignment.Top) {
             PrintStringRect(rect, str, hAlign, vAlign, WrappingType.None);
         }
 
@@ -496,7 +480,7 @@ namespace RenderLike
         /// <param name="fore"></param>
         /// <param name="back"></param>
         public void DrawVerticalLine(int topX, int topY, int length, Color fore, Color back) {
-            DrawVerticalLine(topX, topY, length, (char)SpecialChar.VerticalLine, fore, back);
+            DrawVerticalLine(topX, topY, length, (char) SpecialChar.VerticalLine, fore, back);
         }
 
         /// <summary>
@@ -698,6 +682,44 @@ namespace RenderLike
                 Cells[x + y*Width].Fore = fore.Value;
             if (c.HasValue)
                 Cells[x + y*Width].Char = c.Value;
+
+            // At least something chnaged, mark the cell up as dirty.
+            if (back.HasValue || fore.HasValue || c.HasValue)
+                DirtyCells[x + y*Width] = true;
+        }
+
+        /// <summary>
+        /// Render this surface into a RenderTarget2D
+        /// </summary>
+        /// <returns>A drawn RenderTarget2D with this surfaces data on it</returns>
+        internal virtual RenderTarget2D RenderSurface(RenderTarget2D renderTarget) {
+            ParentConsole.Graphics.SetRenderTarget(renderTarget);
+            ParentConsole.SpriteBatch.Begin(SpriteSortMode.Deferred, BlendState.NonPremultiplied);
+
+            var fontSrc = new Rectangle(0, 0, 10, 10);
+
+            for (int y = 0; y < Height; y++) {
+                for (int x = 0; x < Width; x++) {
+                    if (DirtyCells[x + y*Width]) {
+                        // Background
+                        Font.SetFontSourceRect(ref fontSrc, (char) Font.SolidChar);
+                        ParentConsole.SpriteBatch.Draw(Font.Texture,
+                            new Vector2(x*Font.CharacterWidth, y*Font.CharacterWidth),
+                            fontSrc,
+                            Cells[x + y*Width].Back);
+
+                        // Foreground
+                        Font.SetFontSourceRect(ref fontSrc, Cells[x + y*Width].Char);
+                        ParentConsole.SpriteBatch.Draw(Font.Texture,
+                            new Vector2(x*Font.CharacterWidth, y*Font.CharacterHeight),
+                            fontSrc,
+                            Cells[x + y*Width].Fore);
+                    }
+                }
+            }
+            ParentConsole.SpriteBatch.End();
+            ParentConsole.Graphics.SetRenderTarget(null);
+            return renderTarget;
         }
 
         internal virtual void ClearSurface() {
@@ -706,6 +728,8 @@ namespace RenderLike
                 Cells[i].Char = ' ';
                 Cells[i].Fore = DefaultForeground;
             }
+
+            Array.Clear(DirtyCells, 0, DirtyCells.Length);
         }
     }
 }
