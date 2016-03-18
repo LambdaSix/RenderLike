@@ -55,6 +55,8 @@
     <Compile Include="Surface.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Namegen.cs" />
+    <None Include="Data\jice_fantasy.json" />
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
