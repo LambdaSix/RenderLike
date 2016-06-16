@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 
-namespace RenderLike
+namespace RenderLike.Namegen
 {
 	/*
 	"Configuration": {
@@ -18,7 +17,7 @@ namespace RenderLike
 	}
 	*/
 
-	public class Namegen
+	public class NameGenerator
 	{
 		private Rand _rand = new Rand();
 
@@ -31,20 +30,20 @@ namespace RenderLike
 
 		private string PickSyllableStart(string ruleName)
 		{
-		    //return GetGenerator(ruleName).SyllableStart
-            throw new NotImplementedException();
+			//return GetGenerator(ruleName).SyllableStart
+			throw new NotImplementedException();
 		}
 
 		private string PickSyllableMiddle(string ruleName)
 		{
-            //var pickList = NameGenerators.FirstOrDefault()
-            throw new NotImplementedException();
-        }
+			//var pickList = NameGenerators.FirstOrDefault()
+			throw new NotImplementedException();
+		}
 
 		private string PickSyllableEnd(string ruleName)
 		{
-            throw new NotImplementedException();
-        }
+			throw new NotImplementedException();
+		}
 
 		private NameGeneratorDefinition GetGenerator(string ruleName)
 		{
