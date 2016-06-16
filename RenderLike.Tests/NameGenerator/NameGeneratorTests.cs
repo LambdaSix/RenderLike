@@ -1,8 +1,11 @@
-﻿using System.Linq;
+﻿using System;
+using System.IO;
+using System.Linq;
+using System.Reflection;
 using NUnit.Framework;
 using RenderLike.Namegen;
 
-namespace RenderLike.Tests.NameGenerator
+namespace RenderLike.Tests.Namegen
 {
     [TestFixture]
     public class NameGeneratorTests
@@ -10,8 +13,17 @@ namespace RenderLike.Tests.NameGenerator
         [Test]
         public void GeneratesOutput()
         {
-            var nameGen = new Namegen.NameGenerator();
-            Assert.DoesNotThrow(() => nameGen.GenerateFromRule("default"));
+            var path = TestContext.CurrentContext.TestDirectory;
+            var nameGen = new NameGenerator(Path.Combine(path, @".\Data\Namegen"));
+
+            string output = "";
+            Assert.DoesNotThrow(() => output = nameGen.GenerateFromRule("Demon Female"));
+
+            Assert.That(output, Is.Not.Empty);
+            Console.WriteLine($"Output: {output}");
+
+            var names = String.Join(",", Enumerable.Range(0, 10).Select(s => nameGen.GenerateFromRule("Demon Female")));
+            Console.WriteLine($"Names: {names}");
         }
     }
 
@@ -24,7 +36,7 @@ namespace RenderLike.Tests.NameGenerator
             var parser = new NamegenTokenParser();
             var inputString = @"Hello World";
 
-            var result = parser.ParseString(inputString);
+            var result = parser.ParseString(inputString).ToList();
 
             Assert.That(result.Count(), Is.EqualTo(1));
             Assert.That(result.Cast<LiteralToken>().FirstOrDefault()?.Literal, Is.EqualTo("Hello World"));

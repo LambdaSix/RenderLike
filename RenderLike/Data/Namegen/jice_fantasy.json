@@ -1,0 +1,18 @@
+﻿[
+  {
+    "Name": "Male Fantasy",
+    "StartSyllables": [ "Aer", "An", "Ar", "Ban", "Bar", "Ber", "Beth", "Bett", "Cut", "Dan", "Dar", "Dell", "Der", "Edr", "Er", "Eth", "Ett", "Fin", "Ian", "Iarr", "Ill", "Jed", "Kan", "Kar", "Ker", "Kurr", "Kyr", "Man", "Mar", "Mer", "Mir", "Tsal", "Tser", "Tsir", "Van", "Var", "Yur", "Yyr" ],
+    "MiddleSyllables": [ "al", "an", "ar", "el", "en", "ess", "ian", "onn", "or" ],
+    "EndSyllables": [ "ai", "an", "ar", "ath", "en", "eo", "ian", "is", "u", "or" ],
+    "Illegal": [ "orar", "arar" ],
+    "Rules": [ "$s$m$e", "$s$e", "$s$e" ]
+  },
+  {
+    "Name" : "Fantasy Female", 
+    "StartSyllables": [ "Aer", "An", "Ar", "Ban", "Bar", "Ber", "Beth", "Bett", "Cut", "Dan", "Dar", "Dell", "Der", "Edr", "Er", "Eth", "Ett", "Fin", "Ian", "Iarr", "Ill", "Jed", "Kan", "Kar", "Ker", "Kurr", "Kyr", "Man", "Mar", "Mer", "Mir", "Tsal", "Tser", "Tsir", "Van", "Var", "Yur", "Yyr" ],
+    "MiddleSyllables": [ "al", "an", "ar", "el", "en", "ess", "ian", "onn", "or" ],
+    "EndSyllables": [ "a", "ae", "aelle", "ai", "ea", "i", "ia", "u", "wen", "wyn" ],
+    "Illegal": [ "arrar" ],
+    "Rules": [ "$s$m$e", "$s$e" ]
+  }
+]

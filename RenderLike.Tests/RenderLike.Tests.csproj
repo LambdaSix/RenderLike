@@ -48,6 +48,14 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\RenderLike\Data\Namegen\jice_fantasy.json">
+      <Link>Data\Namegen\jice_fantasy.json</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="..\RenderLike\Data\Namegen\mingos_demon.json">
+      <Link>Data\Namegen\mingos_demon.json</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
