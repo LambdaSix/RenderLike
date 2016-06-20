@@ -1,19 +1,49 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 
 namespace RenderLike.Namegen
 {
+    public class RuleParseResult
+    {
+        public IEnumerable<Token> Tokens { get; }
+        public float RuleChance { get; }
+
+        public RuleParseResult(IEnumerable<Token> tokens, float ruleChance)
+        {
+            RuleChance = ruleChance;
+            Tokens = tokens;
+        }
+    }
+
     public class NamegenTokenParser
     {
-        public IEnumerable<Token> ParseString(string str) {
+        public RuleParseResult ParseRule(string rule)
+        {
+            var tokens = ParseString(rule).ToList();
+
+            if (tokens.Count(s => s.Type == TokenType.RulePercentagePrefix) > 1)
+                throw new ArgumentException($"Rule '{rule}' has more than one rule chance prefix");
+
+            var ruleChance = tokens.SingleOrDefault(s => s.Type == TokenType.RulePercentagePrefix);
+
+            return new RuleParseResult(tokens, ruleChance?.Chance ?? 1.0f);
+        }
+
+        private IEnumerable<Token> ParseString(string str) {
             var reader = new StringReader(str);
+            bool foundRuleChancePrefix = false;
 
             while (reader.Peek() != -1) {
                 var chr = (char)reader.Peek();
 
-                if (chr == '$') {
+                if ((char)reader.Peek() == '%' && !foundRuleChancePrefix) {
+                    reader.Read(); // discard the %
+                    foundRuleChancePrefix = true;
+                    yield return PickRulePercentage(reader);
+                } else if (chr == '$') {
                     reader.Read(); // discard the $
                     yield return pickToken(reader);
                 } else if (isLiteralChar(chr)) {
@@ -27,7 +57,7 @@ namespace RenderLike.Namegen
         private Token pickToken(StringReader reader)
         {
             var sb = new StringBuilder();
-            int percentageValue = 0;
+            float percentageValue = 1.0f;
             while (true)
             {
                 if (((char)reader.Peek()).isDigit())
@@ -39,7 +69,10 @@ namespace RenderLike.Namegen
                 {
                     var pcrVal = sb.ToString();
                     if (!String.IsNullOrWhiteSpace(pcrVal))
-                        percentageValue = Int32.Parse(pcrVal);
+                    {
+                        var value = Int32.Parse(pcrVal);
+                        percentageValue = value/100f; // Scale 0..1
+                    }
                     break;
                 }
             }
@@ -92,12 +125,41 @@ namespace RenderLike.Namegen
             return new LiteralToken(sb.ToString(), 0);
         }
 
+        Token PickRulePercentage(StringReader reader)
+        {
+            var sb = new StringBuilder();
+            float percentageValue = 1.0f; // default to 100% chance of picking this rule.
+            while (true)
+            {
+                var peekChr = (char) reader.Peek();
+                if (peekChr.isDigit())
+                {
+                    var chr = (char) reader.Read();
+                    sb.Append(chr);
+                }
+                else
+                {
+                    var pcrVal = sb.ToString();
+                    if (!String.IsNullOrWhiteSpace(pcrVal))
+                    {
+                        var value = Int32.Parse(pcrVal);
+                        percentageValue = value/100f; // Scale 0..1
+
+                    }
+                    break;
+                }
+            }
+
+            return new Token(TokenType.RulePercentagePrefix, percentageValue);
+        }
+       
         private bool isLiteralChar(char chr) => chr.isAlpha() || chr.isSpace() || chr == '\'' || chr == '-' || chr == '_';
     }
 
     public enum TokenType
     {
         Unknown,
+        RulePercentagePrefix,
         PreSyllable,
         StartSyllable,
         MiddleSyllable,
@@ -112,9 +174,9 @@ namespace RenderLike.Namegen
     public class Token
     {
         public TokenType Type { get; }
-        public double Chance { get; }
+        public float Chance { get; }
 
-        public Token(TokenType type, double chance)
+        public Token(TokenType type, float chance)
         {
             Chance = chance;
             Type = type;

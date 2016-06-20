@@ -5,7 +5,7 @@
     "MiddleSyllables": [ "al", "an", "ar", "el", "en", "ess", "ian", "onn", "or" ],
     "EndSyllables": [ "ai", "an", "ar", "ath", "en", "eo", "ian", "is", "u", "or" ],
     "Illegal": [ "orar", "arar" ],
-    "Rules": [ "$s$m$e", "$s$e", "$s$e" ]
+    "Rules": [ "$s$m$e", "$s$e", "$s$e", "%50$e$s$m" ]
   },
   {
     "Name" : "Fantasy Female", 

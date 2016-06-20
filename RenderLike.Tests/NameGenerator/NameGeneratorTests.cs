@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using NUnit.Framework;
 using RenderLike.Namegen;
 
@@ -17,12 +16,12 @@ namespace RenderLike.Tests.Namegen
             var nameGen = new NameGenerator(Path.Combine(path, @".\Data\Namegen"));
 
             string output = "";
-            Assert.DoesNotThrow(() => output = nameGen.GenerateFromRule("Demon Female"));
+            Assert.DoesNotThrow(() => output = nameGen.GenerateNameFromSet("Demon Female"));
 
             Assert.That(output, Is.Not.Empty);
             Console.WriteLine($"Output: {output}");
 
-            var names = String.Join(",", Enumerable.Range(0, 10).Select(s => nameGen.GenerateFromRule("Demon Female")));
+            var names = string.Join(", ", Enumerable.Range(0, 10).Select(s => nameGen.GenerateNameFromSet("Demon Female")));
             Console.WriteLine($"Names: {names}");
         }
     }
@@ -36,9 +35,9 @@ namespace RenderLike.Tests.Namegen
             var parser = new NamegenTokenParser();
             var inputString = @"Hello World";
 
-            var result = parser.ParseString(inputString).ToList();
+            var result = parser.ParseRule(inputString).Tokens.ToList();
 
-            Assert.That(result.Count(), Is.EqualTo(1));
+            Assert.That(result.Count, Is.EqualTo(1));
             Assert.That(result.Cast<LiteralToken>().FirstOrDefault()?.Literal, Is.EqualTo("Hello World"));
         }
 
@@ -48,7 +47,7 @@ namespace RenderLike.Tests.Namegen
             var parser = new NamegenTokenParser();
             var inputString = @"$m'$50?$25v";
 
-            var result = parser.ParseString(inputString).ToList();
+            var result = parser.ParseRule(inputString).Tokens.ToList();
 
             Assert.That(result.Count(), Is.EqualTo(4));
 
@@ -65,11 +64,29 @@ namespace RenderLike.Tests.Namegen
 
             var third = result.ElementAt(2);
             Assert.That(third.Type, Is.EqualTo(TokenType.Phoneme));
-            Assert.That(third.Chance, Is.EqualTo(50));
+            Assert.That(third.Chance, Is.EqualTo(0.5f));
 
             var fourth = result.ElementAt(3);
             Assert.That(fourth.Type, Is.EqualTo(TokenType.Vocal));
-            Assert.That(fourth.Chance, Is.EqualTo(25));
+            Assert.That(fourth.Chance, Is.EqualTo(0.25f));
+        }
+
+        [Test]
+        public void RuleChancesParse()
+        {
+            var parser = new NamegenTokenParser();
+            var inputString = @"%50$50m$25v";
+
+            var result = parser.ParseRule(inputString);
+            var tokens = result.Tokens.ToList();
+
+            Assert.That(result.RuleChance, Is.EqualTo(0.5f));
+
+            Assert.That(tokens.Count, Is.EqualTo(3));
+
+            var first = tokens.First();
+            Assert.That(first.Type, Is.EqualTo(TokenType.RulePercentagePrefix));
+            Assert.That(first.Chance, Is.EqualTo(0.5f));
         }
     }
 }
