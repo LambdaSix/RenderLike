@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using Microsoft.Xna.Framework;
@@ -7,6 +8,15 @@ using Color = Microsoft.Xna.Framework.Color;
 using Rectangle = Microsoft.Xna.Framework.Rectangle;
 
 namespace RenderLike {
+
+    /// <summary>
+    /// Used by the ColourStringBuilder & Surface::WriteString
+    /// </summary>
+    internal static class ColorTags
+    {
+        internal static char COLOR_ESCAPE { get; } = '\x1B';
+    }
+
     /// <summary>
     /// Horizontal alignment used by various string printing methods
     /// </summary>
@@ -239,6 +249,9 @@ namespace RenderLike {
 
         /// <summary>
         ///     Prints the string using the specified foreground and background colors
+        ///     If the string contains colour escaping values, those colours will be used
+        ///     for those sections and the foreground & background colours passed as params
+        ///     will be otherwise used.
         /// </summary>
         /// <param name="x"></param>
         /// <param name="y"></param>
@@ -248,9 +261,68 @@ namespace RenderLike {
         public void PrintString(int x, int y, string str, Color fore, Color back) {
             if (str == null)
                 throw new ArgumentNullException("str");
+            
+            // int f(string,int)
+            int ExtractColor(string s, ref int idx)
+            {
+                var buff = new StringBuilder(3);
+                while (str[idx] != ';')
+                {
+                    buff.Append(str[idx]);
+                    idx++;
+                }
+                idx++; // Skip the ;
+                return Int32.Parse(buff.ToString());
+            }
 
-            for (int i = 0; i < str.Length; i++) {
-                PrintChar(x + i, y, str[i], fore, back);
+            Color overrideForeColor = fore;
+            Color overrideBackColor = back;
+
+            int i = 0;
+            int xI = 0; // for printable text.
+
+            // Expected format: '\x1B[255;0;0#0;0;0mRed Text\x1B[0;0;0#0;0;0m'
+            // '\x1B[FORE_RED;FORE_GREEN;FORE_BLUE#BACK_RED;BACK_GREEN;BACK_BLUEm' -- specify fore/back colours
+            // '\x1B[FORE_RED;FORE_GREEN;FORE_BLUEm' -- default to black background or whatever 'back' is passed as
+            while (true)
+            {
+                if (str[i] == ColorTags.COLOR_ESCAPE)
+                {
+                    i++; // Move over the COLOR_BLOCK
+                    if (str[i] == '[')
+                    {
+                        i++; // skip the [
+                        // Extract the R
+                        var redForeValue = ExtractColor(str, ref i);
+                        var greenForeValue = ExtractColor(str, ref i);
+                        var blueForeValue = ExtractColor(str, ref i);
+
+                        overrideForeColor = new Color(redForeValue, greenForeValue, blueForeValue);
+
+                        if (str[i] == 'm')
+                        {
+                            i++;
+                            continue;
+                        }
+                        else if (str[i] == '#')
+                        {
+                            // Extract the background colour now.
+                            var redBackValue = ExtractColor(str, ref i);
+                            var greenBackValue = ExtractColor(str, ref i);
+                            var blueBackValue = ExtractColor(str, ref i);
+
+                            overrideBackColor = new Color(redBackValue, greenBackValue, blueBackValue);
+                        }
+
+                        i++; // skip the m
+                    }
+                }
+                else
+                {
+                    PrintChar(x + xI, y, str[i], overrideForeColor, overrideBackColor);
+                    i++; // Increment the str indexer
+                    xI++; // Increment the visual printing indexer.
+                }
             }
         }
 
