@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -253,21 +254,37 @@ namespace RenderLike {
         ///     for those sections and the foreground & background colours passed as params
         ///     will be otherwise used.
         /// </summary>
-        /// <param name="x"></param>
-        /// <param name="y"></param>
-        /// <param name="str"></param>
-        /// <param name="fore"></param>
-        /// <param name="back"></param>
+        /// <param name="x">X position to start drawing at</param>
+        /// <param name="y">Y position to start drawing at</param>
+        /// <param name="str">The string to print, optionally with colour escape sequences</param>
+        /// <param name="fore">Foreground colour to use for text without colour instructions</param>
+        /// <param name="back">Background colour to use for text without colour instructions</param>
         public void PrintString(int x, int y, string str, Color fore, Color back) {
             if (str == null)
-                throw new ArgumentNullException("str");
+                throw new ArgumentNullException(nameof(str));
             
             // int f(string,int)
-            int ExtractColor(string s, ref int idx)
+            int ExtractColor(string s, ref int idx, out bool terminatorFound, out bool backgroundFound)
             {
+                terminatorFound = false;
+                backgroundFound = false;
+
                 var buff = new StringBuilder(3);
-                while (str[idx] != ';')
+                while (s[idx] != ';')
                 {
+                    // Might be a foreground specification only, so check for the end of the entire section
+                    if (s[idx] == 'm')
+                    {
+                        terminatorFound = true;
+                        break;
+                    }
+
+                    if (s[idx] == '#')
+                    {
+                        backgroundFound = true;
+                        break;
+                    }
+
                     buff.Append(str[idx]);
                     idx++;
                 }
@@ -284,37 +301,50 @@ namespace RenderLike {
             // Expected format: '\x1B[255;0;0#0;0;0mRed Text\x1B[0;0;0#0;0;0m'
             // '\x1B[FORE_RED;FORE_GREEN;FORE_BLUE#BACK_RED;BACK_GREEN;BACK_BLUEm' -- specify fore/back colours
             // '\x1B[FORE_RED;FORE_GREEN;FORE_BLUEm' -- default to black background or whatever 'back' is passed as
+            // '\x1B[0m' -- reset colour to the values passed in fore/back
             while (true)
             {
+                if (i >= str.Length)
+                    break;
+
                 if (str[i] == ColorTags.COLOR_ESCAPE)
                 {
-                    i++; // Move over the COLOR_BLOCK
+                    i++; // Move over the COLOR_ESCAPE
+
+                    // Early check for the reset instruction
+                    if (str.Substring(i, 3) == "[0m")
+                    {
+                        overrideForeColor = fore;
+                        overrideBackColor = back;
+                        i += 3;
+                        continue;
+                    }
+
                     if (str[i] == '[')
                     {
+                        bool terminatorFound;
+                        bool backgroundFound;
+
                         i++; // skip the [
                         // Extract the R
-                        var redForeValue = ExtractColor(str, ref i);
-                        var greenForeValue = ExtractColor(str, ref i);
-                        var blueForeValue = ExtractColor(str, ref i);
+                        var redForeValue = ExtractColor(str, ref i, out terminatorFound, out backgroundFound);
+                        var greenForeValue = ExtractColor(str, ref i, out terminatorFound, out backgroundFound);
+                        var blueForeValue = ExtractColor(str, ref i, out terminatorFound, out backgroundFound);
 
                         overrideForeColor = new Color(redForeValue, greenForeValue, blueForeValue);
 
-                        if (str[i] == 'm')
-                        {
-                            i++;
+                        if (terminatorFound)
                             continue;
-                        }
-                        else if (str[i] == '#')
+
+                        if (backgroundFound)
                         {
                             // Extract the background colour now.
-                            var redBackValue = ExtractColor(str, ref i);
-                            var greenBackValue = ExtractColor(str, ref i);
-                            var blueBackValue = ExtractColor(str, ref i);
+                            var redBackValue = ExtractColor(str, ref i, out terminatorFound, out backgroundFound);
+                            var greenBackValue = ExtractColor(str, ref i, out terminatorFound, out backgroundFound);
+                            var blueBackValue = ExtractColor(str, ref i, out terminatorFound, out backgroundFound);
 
                             overrideBackColor = new Color(redBackValue, greenBackValue, blueBackValue);
                         }
-
-                        i++; // skip the m
                     }
                 }
                 else
