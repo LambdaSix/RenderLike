@@ -58,7 +58,7 @@ namespace RenderLike
         }
 
         /// <summary>
-        /// Write a section of coloured text then reset back to the white on black after.
+        /// Write a section of coloured text then reset back to default colors.
         /// </summary>
         /// <param name="str"></param>
         /// <param name="foreColor"></param>
