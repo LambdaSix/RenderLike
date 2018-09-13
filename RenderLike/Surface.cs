@@ -1,5 +1,7 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -7,6 +9,15 @@ using Color = Microsoft.Xna.Framework.Color;
 using Rectangle = Microsoft.Xna.Framework.Rectangle;
 
 namespace RenderLike {
+
+    /// <summary>
+    /// Used by the ColourStringBuilder & Surface::WriteString
+    /// </summary>
+    internal static class ColorTags
+    {
+        internal static char COLOR_ESCAPE { get; } = '\x1B';
+    }
+
     /// <summary>
     /// Horizontal alignment used by various string printing methods
     /// </summary>
@@ -239,18 +250,109 @@ namespace RenderLike {
 
         /// <summary>
         ///     Prints the string using the specified foreground and background colors
+        ///     If the string contains colour escaping values, those colours will be used
+        ///     for those sections and the foreground & background colours passed as params
+        ///     will be otherwise used.
         /// </summary>
-        /// <param name="x"></param>
-        /// <param name="y"></param>
-        /// <param name="str"></param>
-        /// <param name="fore"></param>
-        /// <param name="back"></param>
+        /// <param name="x">X position to start drawing at</param>
+        /// <param name="y">Y position to start drawing at</param>
+        /// <param name="str">The string to print, optionally with colour escape sequences</param>
+        /// <param name="fore">Foreground colour to use for text without colour instructions</param>
+        /// <param name="back">Background colour to use for text without colour instructions</param>
         public void PrintString(int x, int y, string str, Color fore, Color back) {
             if (str == null)
-                throw new ArgumentNullException("str");
+                throw new ArgumentNullException(nameof(str));
+            
+            // int f(string,int)
+            int ExtractColor(string s, ref int idx, out bool terminatorFound, out bool backgroundFound)
+            {
+                terminatorFound = false;
+                backgroundFound = false;
 
-            for (int i = 0; i < str.Length; i++) {
-                PrintChar(x + i, y, str[i], fore, back);
+                var buff = new StringBuilder(3);
+                while (s[idx] != ';')
+                {
+                    // Might be a foreground specification only, so check for the end of the entire section
+                    if (s[idx] == 'm')
+                    {
+                        terminatorFound = true;
+                        break;
+                    }
+
+                    if (s[idx] == '#')
+                    {
+                        backgroundFound = true;
+                        break;
+                    }
+
+                    buff.Append(str[idx]);
+                    idx++;
+                }
+                idx++; // Skip the ;
+                return Int32.Parse(buff.ToString());
+            }
+
+            Color overrideForeColor = fore;
+            Color overrideBackColor = back;
+
+            int i = 0;
+            int xI = 0; // for printable text.
+
+            // Expected format: '\x1B[255;0;0#0;0;0mRed Text\x1B[0;0;0#0;0;0m'
+            // '\x1B[FORE_RED;FORE_GREEN;FORE_BLUE#BACK_RED;BACK_GREEN;BACK_BLUEm' -- specify fore/back colours
+            // '\x1B[FORE_RED;FORE_GREEN;FORE_BLUEm' -- default to black background or whatever 'back' is passed as
+            // '\x1B[0m' -- reset colour to the values passed in fore/back
+            while (true)
+            {
+                if (i >= str.Length)
+                    break;
+
+                if (str[i] == ColorTags.COLOR_ESCAPE)
+                {
+                    i++; // Move over the COLOR_ESCAPE
+
+                    // Early check for the reset instruction
+                    if (str.Substring(i, 3) == "[0m")
+                    {
+                        overrideForeColor = fore;
+                        overrideBackColor = back;
+                        i += 3;
+                        continue;
+                    }
+
+                    if (str[i] == '[')
+                    {
+                        bool terminatorFound;
+                        bool backgroundFound;
+
+                        i++; // skip the [
+                        // Extract the R
+                        var redForeValue = ExtractColor(str, ref i, out terminatorFound, out backgroundFound);
+                        var greenForeValue = ExtractColor(str, ref i, out terminatorFound, out backgroundFound);
+                        var blueForeValue = ExtractColor(str, ref i, out terminatorFound, out backgroundFound);
+
+                        overrideForeColor = new Color(redForeValue, greenForeValue, blueForeValue);
+
+                        if (terminatorFound)
+                            continue;
+
+                        if (backgroundFound)
+                        {
+                            // Extract the background colour now.
+                            var redBackValue = ExtractColor(str, ref i, out terminatorFound, out backgroundFound);
+                            var greenBackValue = ExtractColor(str, ref i, out terminatorFound, out backgroundFound);
+                            var blueBackValue = ExtractColor(str, ref i, out terminatorFound, out backgroundFound);
+
+                            overrideBackColor = new Color(redBackValue, greenBackValue, blueBackValue);
+                        }
+                    }
+                }
+                else
+                {
+                    PrintChar(x + xI, y, str[i], overrideForeColor, overrideBackColor);
+                    i++; // Increment the str indexer
+                    xI++; // Increment the visual printing indexer.
+                }
             }
         }
 

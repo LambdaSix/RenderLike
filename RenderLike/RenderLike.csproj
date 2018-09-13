@@ -52,6 +52,7 @@
     <Compile Include="BSP\BSPTree.cs" />
     <Compile Include="BSP\SplitDirection.cs" />
     <Compile Include="CharExtensions.cs" />
+    <Compile Include="ColorStringBuilder.cs" />
     <Compile Include="Rand.cs" />
     <Compile Include="RLConsole.cs" />
     <Compile Include="Font.cs" />
