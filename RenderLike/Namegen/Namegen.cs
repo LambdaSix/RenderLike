@@ -58,7 +58,7 @@ namespace RenderLike.Namegen
 			var parsedRules = rules.Select(s => parser.ParseRule(s)).ToList();
 
 
-			var rule = PickWeightedRandom(parsedRules, s => s.RuleChance);
+			var rule = _rand.PickWeightedRandom(parsedRules, s => s.RuleChance);
 
 			sb.Append(ParseTokens(nameSet, rule.Tokens));
 
@@ -116,55 +116,20 @@ namespace RenderLike.Namegen
 			return sb.ToString();
 		}
 
-		string PickPre(string ruleName, float chance) => PickRandomOrNothing(GetGenerator(ruleName)?.PreSyllables, chance) ?? "";
-		string PickStart(string ruleName, float chance) => PickRandomOrNothing(GetGenerator(ruleName)?.StartSyllables, chance) ?? "";
-		string PickMiddle(string ruleName, float chance) => PickRandomOrNothing(GetGenerator(ruleName)?.MiddleSyllables, chance) ?? "";
-		string PickEnd(string ruleName, float chance) => PickRandomOrNothing(GetGenerator(ruleName)?.EndSyllables, chance) ?? "";
-        string PickPost(string ruleName, float chance) => PickRandomOrNothing(GetGenerator(ruleName)?.PostSyllables, chance) ?? "";
-        string PickVocal(string ruleName, float chance) => PickRandomOrNothing(GetGenerator(ruleName)?.Vocals, chance) ?? "";
-        string PickConsonant(string ruleName, float chance) => PickRandomOrNothing(GetGenerator(ruleName)?.Consonants, chance) ?? "";
-        string PickPhoneme(string ruleName, float chance) => PickRandomOrNothing(GetGenerator(ruleName)?.Phonemes, chance) ?? "";
+		string PickPre(string ruleName, float chance) => _rand.PickRandomOrNothing(GetGenerator(ruleName)?.PreSyllables, chance) ?? "";
+		string PickStart(string ruleName, float chance) => _rand.PickRandomOrNothing(GetGenerator(ruleName)?.StartSyllables, chance) ?? "";
+		string PickMiddle(string ruleName, float chance) => _rand.PickRandomOrNothing(GetGenerator(ruleName)?.MiddleSyllables, chance) ?? "";
+		string PickEnd(string ruleName, float chance) => _rand.PickRandomOrNothing(GetGenerator(ruleName)?.EndSyllables, chance) ?? "";
+        string PickPost(string ruleName, float chance) => _rand.PickRandomOrNothing(GetGenerator(ruleName)?.PostSyllables, chance) ?? "";
+        string PickVocal(string ruleName, float chance) => _rand.PickRandomOrNothing(GetGenerator(ruleName)?.Vocals, chance) ?? "";
+        string PickConsonant(string ruleName, float chance) => _rand.PickRandomOrNothing(GetGenerator(ruleName)?.Consonants, chance) ?? "";
+        string PickPhoneme(string ruleName, float chance) => _rand.PickRandomOrNothing(GetGenerator(ruleName)?.Phonemes, chance) ?? "";
 
         private NameGeneratorDefinition GetGenerator(string ruleName)
 		{
 			NameGeneratorDefinition outValue;
 			return NameGenerators.TryGetValue(ruleName, out outValue) ? outValue : null;
 		}
-
-		private T PickRandom<T>(IList<T> sequence)
-		{
-			if (sequence != null && sequence.Any())
-				return sequence.ElementAt(_rand.GetInt(0, sequence.Count - 1));
-
-			throw new ArgumentNullException(nameof(sequence), "Sequence referenced with no values");
-		}
-
-		private T PickWeightedRandom<T>(IEnumerable<T> sequence, Func<T, float> weightSelector)
-		{
-			sequence = sequence.ToList();
-			float totalWeight = sequence.Sum(weightSelector);
-			float itemWeightIndex = (float) (new Random().NextDouble()*totalWeight);
-			float currentWeightIndex = 0;
-
-			foreach (var item in sequence.Select(s => new {Value = s, Weight = weightSelector(s)}))
-			{
-				currentWeightIndex += item.Weight;
-
-				if (currentWeightIndex >= itemWeightIndex)
-					return item.Value;
-			}
-
-			return default(T);
-		}
-
-	    private T PickRandomOrNothing<T>(IList<T> sequence, float chance)
-	    {
-	        if (chance > _rand.GetFloat())
-	        {
-	            return PickRandom(sequence);
-	        }
-	        return default(T);
-	    }
 	}
 
 	/// <summary>
