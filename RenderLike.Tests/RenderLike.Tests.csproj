@@ -44,8 +44,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BresenhamTests.cs" />
+    <Compile Include="CharExtensionsTests.cs" />
+    <Compile Include="ColorStringBuilderTests.cs" />
     <Compile Include="NameGenerator\NameGeneratorTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RandTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\RenderLike\Data\Namegen\jice_fantasy.json">
