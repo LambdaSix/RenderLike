@@ -186,7 +186,7 @@ namespace RenderLike.BSP
 
                 if (minDelta > n.Rect.Height / 2)
                     return false;
-                pos = rand.GetInt(minDelta, n.Rect.Height - minDelta);
+                pos = rand.Next(minDelta, n.Rect.Height - minDelta);
             }
             else {
                 int min2 = (int)(hFactor * 0.5f * n.Rect.Width);
@@ -195,7 +195,7 @@ namespace RenderLike.BSP
                 if (minDelta > n.Rect.Width / 2)
                     return false;
 
-                pos = rand.GetInt(minDelta, n.Rect.Width - minDelta);
+                pos = rand.Next(minDelta, n.Rect.Width - minDelta);
             }
             return true;
         }
