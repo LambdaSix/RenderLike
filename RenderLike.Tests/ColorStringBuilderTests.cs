@@ -60,7 +60,6 @@ namespace RenderLike.Tests
         // Remove the [Ignore] when fixed.
         // --------------------------------------------------------------------
         [Test]
-        [Ignore("Known bug: AppendLine(string) appends Environment.NewLine after every character instead of once after the string. Remove Ignore when fixed.")]
         public void AppendLine_AppendsSingleTrailingNewline()
         {
             var sb = new ColorStringBuilder();

@@ -253,7 +253,6 @@ namespace RenderLike.Tests
         // --------------------------------------------------------------------
 
         [Test]
-        [Ignore("Known bug: PickFrom indexes choices[Next(0, Length)] but Next is inclusive of its upper bound, so it can index choices[Length] and throw IndexOutOfRangeException. Remove Ignore when fixed.")]
         public void PickFrom_SingleElement_NeverThrows()
         {
             var rand = new Rand(Seed);
@@ -265,7 +264,6 @@ namespace RenderLike.Tests
         }
 
         [Test]
-        [Ignore("Known bug: FromEnum routes through PickFrom, inheriting the same inclusive-index out-of-bounds defect. Remove Ignore when fixed.")]
         public void FromEnum_NeverThrows()
         {
             var rand = new Rand(Seed);
@@ -277,7 +275,6 @@ namespace RenderLike.Tests
         }
 
         [Test]
-        [Ignore("Known bug: NextULong(min, max) computes range as (min - max) instead of (max - min); for min < max this underflows and results fall outside [min, max). Remove Ignore when fixed.")]
         public void NextULong_Bounded_StaysInRange()
         {
             var rand = new Rand(Seed);
