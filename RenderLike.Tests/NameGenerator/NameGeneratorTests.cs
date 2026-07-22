@@ -53,7 +53,9 @@ namespace RenderLike.Tests.Namegen
 
             var first = result.First();
             Assert.That(first.Type, Is.EqualTo(TokenType.MiddleSyllable));
-            Assert.That(first.Chance, Is.EqualTo(0));
+            // A token with no explicit percentage defaults to 1.0f (always include);
+            // a 0 default would mean the syllable never appears. (#10)
+            Assert.That(first.Chance, Is.EqualTo(1.0f));
 
             var second = result.ElementAt(1);
             Assert.That(second.Type, Is.EqualTo(TokenType.Literal));
