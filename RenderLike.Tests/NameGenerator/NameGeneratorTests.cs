@@ -13,7 +13,7 @@ namespace RenderLike.Tests.Namegen
         public void GeneratesOutput()
         {
             var path = TestContext.CurrentContext.TestDirectory;
-            var nameGen = new NameGenerator(Path.Combine(path, @".\Data\Namegen"));
+            var nameGen = new NameGenerator(Path.Combine(path, "Data", "Namegen"));
 
             string output = "";
             Assert.DoesNotThrow(() => output = nameGen.GenerateNameFromSet("Demon Female"));
