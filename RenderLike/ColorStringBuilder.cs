@@ -44,11 +44,8 @@ namespace RenderLike
 
         public void AppendLine(string str)
         {
-            foreach (var c in str)
-            {
-                Append(c);
-                Append(Environment.NewLine);
-            }
+            Append(str);
+            Append(Environment.NewLine);
         }
 
         public void AppendLine(string str, Color foreColor, Color backColor, Color defaultFore, Color defaultBack)
