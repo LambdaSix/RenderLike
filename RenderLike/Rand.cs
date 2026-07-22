@@ -107,7 +107,7 @@ namespace RenderLike
         }
 
         public ulong NextULong(ulong min, ulong max, bool inclusiveUpperBound = false) {
-            ulong range = min - max;
+            ulong range = max - min;
             if (inclusiveUpperBound) {
                 if (range == ulong.MaxValue)
                     NextULong();
@@ -166,7 +166,7 @@ namespace RenderLike
         }
 
 
-        public T PickFrom<T>(params T[] choices) => choices[Next(0, choices.Length)];
+        public T PickFrom<T>(params T[] choices) => choices[Next(0, choices.Length - 1)];
 
         public T FromEnum<T>() => PickFrom((T[])Enum.GetValues(typeof (T)));
 
